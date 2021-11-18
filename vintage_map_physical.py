@@ -43,7 +43,6 @@ parser.add_argument("-n", "--name",action='store', type=str, help="Prefix of the
 
 parser.add_argument("-b_x", "--border_x",action='store', type=float, help="Border added to each plate in the X dimension, in mm.",dest='border_x',default=0)
 parser.add_argument("-b_y", "--border_y",action='store', type=float, help="Border added to each plate in the Y dimension, in mm.",dest='border_y',default=0)
-parser.add_argument("-b_w", "--border_w",action='store', type=int, help="Border width added to each plate, in pixels.",dest='border_w',default=0)
 
 parser.add_argument("-p", "--print",action='store', help="Create a printable version. Give page format(A3, A4, A5, Letter, Legal).",dest='print',default='False')
 parser.add_argument("-m", "--margin",action='store', type=float, help="Margin to use on the page, in mm.",dest='margin',default=10)
@@ -90,8 +89,6 @@ border_x = args.border_x
 logger.info('X border size on each plates: '+str(border_x))
 border_y = args.border_y
 logger.info('Y border size on each plates: '+str(border_y))
-border_w = args.border_w
-logger.info('Border width on each plates: '+str(border_y))
 printable = args.print
 logger.info('Create a printable version: '+str(printable))
 margin = args.margin
@@ -231,14 +228,14 @@ logger.info('Scale factor in the X dimension: '+str(scale_x))
 logger.info('Scale factor in the Y dimension: '+str(scale_y))
 
 ## for each slice calculate the contour lines
-line_width = round(math.ceil((line_width-1)/2))
-logger.info('Half line width: '+str(line_width))
+half_line_width = round(math.ceil((line_width-1)/2))
+logger.info('Half line width: '+str(half_line_width))
 
 ##contour simple code
 new_slices = []
 for slice in slices:
 	new_slice=np.zeros(slice.shape,dtype=map_file.dtype)
-	to_place = list(set([(x,y) for level in [ct_min+q*(ct_max-ct_min)/ct_num for q in range(0,ct_num,1)] for contour in measure.find_contours(slice, level) for pos in contour for x in range(round(pos[0])-line_width,round(pos[0])+line_width+1,1) for y in range(round(pos[1])-line_width,round(pos[1])+line_width+1,1)]))
+	to_place = list(set([(x,y) for level in [ct_min+q*(ct_max-ct_min)/ct_num for q in range(0,ct_num,1)] for contour in measure.find_contours(slice, level) for pos in contour for x in range(round(pos[0])-half_line_width,round(pos[0])+half_line_width+1,1) for y in range(round(pos[1])-half_line_width,round(pos[1])+half_line_width+1,1)]))
 	for (x,y) in to_place:
 		new_slice[x,y]=1
 	new_slices.append(new_slice)
@@ -326,70 +323,66 @@ logger.info('Initial object dimensions Z (in mm): '+str(thick*slice_num))
 logger.info('Initial object dimensions X (in mm): '+str(slices[0].shape[0]/px_per_mm_x))
 logger.info('Initial object dimensions Y (in mm): '+str(slices[0].shape[1]/px_per_mm_y))
 
-#add border markings to figures
-if border_w >0:
-	#adjusting plate size for borders
-	if border_x >0:
-		border_x = px_per_mm_x*border_x
-		if border_x > slices[0].shape[0]:
-			logger.info('Adjusting X dimension to include border')
-			padding_x = int(round((border_x-slices[0].shape[0])/2))
-			padding = np.zeros((padding_x,slices[0].shape[1]))
-			slices = [np.concatenate((padding,slice,padding),axis=0) for slice in slices]
-		if border_x < slices[0].shape[0]:
-			print('WARNING, border smaller than map in the X dimension.')
-			logger.info('WARNING, border smaller than map in the X dimension.')
+#adjusting plate size for borders
+if border_x >0:
+	border_x = px_per_mm_x*border_x
+	if border_x > slices[0].shape[0]:
+		logger.info('Adjusting X dimension to include border')
+		padding_x = int(round((border_x-slices[0].shape[0])/2))
+		padding = np.zeros((padding_x,slices[0].shape[1]))
+		slices = [np.concatenate((padding,slice,padding),axis=0) for slice in slices]
+	if border_x < slices[0].shape[0]:
+		print('WARNING, border smaller than map in the X dimension.')
+		logger.info('WARNING, border smaller than map in the X dimension.')
 
-	if border_y >0:
-		border_y = px_per_mm_y*border_y
-		if border_y > slices[0].shape[1]:
-			logger.info('Adjusting Y dimension to include border')
-			padding_y = int(round((border_y-slices[0].shape[1])/2))
-			padding = np.zeros((slices[0].shape[0],padding_y))
-			slices = [np.concatenate((padding,slice,padding),axis=1) for slice in slices]
-		if border_y < slices[0].shape[1]:
-			print('WARNING, border smaller than map in the Y dimension.')
-			logger.info('WARNING, border smaller than map in the Y dimension.')
+if border_y >0:
+	border_y = px_per_mm_y*border_y
+	if border_y > slices[0].shape[1]:
+		logger.info('Adjusting Y dimension to include border')
+		padding_y = int(round((border_y-slices[0].shape[1])/2))
+		padding = np.zeros((slices[0].shape[0],padding_y))
+		slices = [np.concatenate((padding,slice,padding),axis=1) for slice in slices]
+	if border_y < slices[0].shape[1]:
+		print('WARNING, border smaller than map in the Y dimension.')
+		logger.info('WARNING, border smaller than map in the Y dimension.')
 
-	logger.info('Bordered slice dimensions: ('+', '.join([str(x) for x in slices[0].shape])+')')
+logger.info('Bordered slice dimensions: ('+', '.join([str(x) for x in slices[0].shape])+')')
 
-	logger.info('Adding border markings to each plate.')
-	if ((border_x > 0) and (border_y > 0)):
-		logger.info('Drawing centered borders.')
-		(center_x,center_y) = (slices[0].shape[0],slices[0].shape[1])
-		center_x = int(center_x/2)
-		center_y = int(center_y/2)
-		left_edge = max(0,int(center_x-border_x/2))
-		right_edge = min(int(center_x+border_x/2),slices[0].shape[0])
-		bottom_edge = max(0,int(center_y-border_y/2))
-		top_edge = min(int(center_y+border_y/2),slices[0].shape[1])
-		for slice in slices:
-			for x in range(left_edge,right_edge,1):
-				for y in range(bottom_edge,bottom_edge+border_w,1):
-					slice[x,y]=1
-				for y in range(top_edge-border_w,top_edge,1):
-					slice[x,y]=1
-			for y in range(bottom_edge,top_edge,1):
-				for x in range(left_edge,left_edge+border_w,1):
-					slice[x,y]=1
-				for x in range(right_edge-border_w,right_edge,1):
-					slice[x,y]=1
+logger.info('Adding border markings to each plate.')
+if ((border_x > 0) and (border_y > 0)):
+	logger.info('Drawing centered borders.')
+	(center_x,center_y) = (slices[0].shape[0],slices[0].shape[1])
+	center_x = int(center_x/2)
+	center_y = int(center_y/2)
+	left_edge = max(0,int(center_x-border_x/2))
+	right_edge = min(int(center_x+border_x/2),slices[0].shape[0])
+	bottom_edge = max(0,int(center_y-border_y/2))
+	top_edge = min(int(center_y+border_y/2),slices[0].shape[1])
+	for slice in slices:
+		for x in range(left_edge,right_edge,1):
+			for y in range(bottom_edge,bottom_edge+line_width,1):
+				slice[x,y]=1
+			for y in range(top_edge-line_width,top_edge,1):
+				slice[x,y]=1
+		for y in range(bottom_edge,top_edge,1):
+			for x in range(left_edge,left_edge+line_width,1):
+				slice[x,y]=1
+			for x in range(right_edge-line_width,right_edge,1):
+				slice[x,y]=1
 
-	else:
-		logger.info('At-least one border size is zero. Edge the images.')
-		for slice in slices:
-			for x in range(0,slice.shape[0],1):
-				for y in range(0,border_w,1):
-					slice[x,y]=1
-				for y in range(slice.shape[1]-border_w,slice.shape[1],1):
-					slice[x,y]=1
-			for y in range(0,slice.shape[1],1):
-				for x in range(0,border_w,1):
-					slice[x,y]=1
-				for x in range(slice.shape[0]-border_w,slice.shape[0],1):
-					slice[x,y]=1
-
-
+else:
+	logger.info('At-least one border size is zero. Edge the images.')
+	for slice in slices:
+		for x in range(0,slice.shape[0],1):
+			for y in range(0,line_width,1):
+				slice[x,y]=1
+			for y in range(slice.shape[1]-line_width,slice.shape[1],1):
+				slice[x,y]=1
+		for y in range(0,slice.shape[1],1):
+			for x in range(0,line_width,1):
+				slice[x,y]=1
+			for x in range(slice.shape[0]-line_width,slice.shape[0],1):
+				slice[x,y]=1
 
 #add hole-marking square x from the x-edge and y from the y-edge
 hm_x = round(hm_x*px_per_mm_x)
@@ -400,16 +393,31 @@ if hm_w>0:
 	logger.info('Adding hole markings '+str(hm_x)+' mm from the X axis and '+str(hm_y)+' mm from the Y axis')
 	for slice in slices:
 		for x in range(hm_x-hm_w_x,hm_x+hm_w_x,1):
-			for y in range(hm_y-hm_w_y,hm_y+hm_w_y,1):
+			for y in range(hm_y-line_width,hm_y+line_width,1):
 				slice[x,y]=1
+		for y in range(hm_y-hm_w_y,hm_y+hm_w_y,1):
+			for x in range(hm_x-line_width,hm_x+line_width,1):
+				slice[x,y]=1
+
 		for x in range(slice.shape[0]-hm_x-hm_w_x,slice.shape[0]-hm_x+hm_w_x,1):
-			for y in range(hm_y-hm_w_y,hm_y+hm_w_y,1):
+			for y in range(hm_y-line_width,hm_y+line_width,1):
 				slice[x,y]=1
+		for y in range(hm_y-hm_w_y,hm_y+hm_w_y,1):
+			for x in range(slice.shape[0]-hm_x-line_width,slice.shape[0]-hm_x+line_width,1):
+				slice[x,y]=1
+
 		for x in range(hm_x-hm_w_x,hm_x+hm_w_x,1):
-			for y in range(slice.shape[1]-hm_y-hm_w_y,slice.shape[1]-hm_y+hm_w_y,1):
+			for y in range(slice.shape[1]-hm_y-line_width,slice.shape[1]-hm_y+line_width,1):
 				slice[x,y]=1
+		for y in range(slice.shape[1]-hm_y-hm_w_y,slice.shape[1]-hm_y+hm_w_y,1):
+			for x in range(hm_x-line_width,hm_x+line_width,1):
+				slice[x,y]=1
+
 		for x in range(slice.shape[0]-hm_x-hm_w_x,slice.shape[0]-hm_x+hm_w_x,1):
-			for y in range(slice.shape[1]-hm_y-hm_w_y,slice.shape[1]-hm_y+hm_w_y,1):
+			for y in range(slice.shape[1]-hm_y-line_width,slice.shape[1]-hm_y+line_width,1):
+				slice[x,y]=1
+		for y in range(slice.shape[1]-hm_y-hm_w_y,slice.shape[1]-hm_y+hm_w_y,1):
+			for x in range(slice.shape[0]-hm_x-line_width,slice.shape[0]-hm_x+line_width,1):
 				slice[x,y]=1
 
 #calculate dpi based on layer thinkness and pixels in sliced dimension
