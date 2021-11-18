@@ -248,7 +248,7 @@ slices = [slices[x] for x in range(left,right+1,1)]
 
 #create new map file
 map_file = np.array(slices)
-with mrcfile.new('sub_map.mrc') as mrc:
+with mrcfile.new(name+'_sub_map.mrc') as mrc:
 	mrc.set_data(map_file)
 	vsize = mrc.voxel_size.copy()
 	vsize.x = voxel_size[0]
@@ -258,7 +258,7 @@ with mrcfile.new('sub_map.mrc') as mrc:
 
 #create new map file
 map_file = np.array(new_slices)
-with mrcfile.new('contoured_sub_map.mrc') as mrc:
+with mrcfile.new(name+'_contoured_sub_map.mrc') as mrc:
 	mrc.set_data(map_file)
 	vsize = mrc.voxel_size.copy()
 	vsize.x = voxel_size[0]
