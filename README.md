@@ -44,11 +44,13 @@ python3 physical_map_virtual.py -h
 ```
 Edit the physical_runner.bash as you see fit.
 
-Note: I would suggest using the virtual map maker to optimize everything before running creating a physical template.  
+Note1: I would suggest using the virtual map maker to optimize everything before creating a physical template.  
 
-Note: The critical parameter here is the physical slice thickness. This then determines all other real-world dimensions.
+Note2: The critical parameter here is the physical slice thickness. This then determines all other real-world dimensions.
 
-Note: Resampling the map takes time and the data requirements grow as the cube of the factor provided. I typically use 1-2 for testing, and 4-5 for the final run.
+Note3: Resampling the map takes time and the data requirements grow as the cube of the factor provided. I typically use 1-2 for testing, and 4-5 for the final run.
+
+Note4: While the pdf maker '''should''' render on the proper page size, I noticed the printer did its own rescaling. Therefore, for practicallity I used the slice images and manually rescaled them in MS Word to print at the proper size.
 
 3. Run the physical map maker. 
 After editing the physical_runner.bash script, run it using
