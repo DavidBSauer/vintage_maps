@@ -1,8 +1,8 @@
 name='modelmaker'
 
-/Users/davidbsauer/Library/Python/3.8/bin/virtualenv $name
+virtualenv $name
 
-/Users/davidbsauer/Library/Python/3.8/bin/virtualenv -p /usr/bin/python3 $name
+virtualenv -p /usr/bin/python3 $name
 
 source $name/bin/activate
 
